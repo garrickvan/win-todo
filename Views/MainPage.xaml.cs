@@ -271,11 +271,11 @@ namespace WinTodo.Views
       List<TaskItem> tasks;
       if (_currentCategory == "回收站")
       {
-        tasks = _dataManager.GetRecycleBinTasks();
+        tasks = _dataManager.GetRecycleBinTasks().ToList();
       }
       else
       {
-        tasks = _dataManager.GetTasksByGroup(_currentCategory);
+        tasks = _dataManager.GetTasksByGroup(_currentCategory).ToList();
       }
 
       // 排序：未完成任务在前，已完成任务在后；未完成任务按紧急度降序（紧急>重要>一般），已完成任务按创建时间排序
@@ -320,7 +320,7 @@ namespace WinTodo.Views
     /// </summary>
     private void ShowEmptyState()
     {
-      StackPanel emptyPanel = new StackPanel
+      StackPanel emptyPanel = new()
       {
         Margin = new(0, 40, 0, 40),
         HorizontalAlignment = HorizontalAlignment.Center,
@@ -330,7 +330,7 @@ namespace WinTodo.Views
       };
 
       // 空状态图标
-      TextBlock emptyIcon = new TextBlock
+      TextBlock emptyIcon = new()
       {
         Text = "📝",
         FontSize = 48,
@@ -339,7 +339,7 @@ namespace WinTodo.Views
       };
 
       // 空状态标题
-      TextBlock emptyTitle = new TextBlock
+      TextBlock emptyTitle = new()
       {
         Text = "没有任务",
         FontSize = 16,
@@ -349,7 +349,7 @@ namespace WinTodo.Views
       };
 
       // 空状态描述
-      TextBlock emptyDesc = new TextBlock
+      TextBlock emptyDesc = new()
       {
         Text = "当前分组中没有任务，点击上方\"添加任务\"按钮创建一个新任务",
         FontSize = 12,

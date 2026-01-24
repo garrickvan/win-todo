@@ -1,3 +1,23 @@
+//  Copyright (c) 2026 WinTodo
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -34,7 +54,16 @@ namespace WinTodo.Data
     {
         private const string DataFileName = "tasks.json";
         private readonly string _dataFilePath;
-        private List<TaskItem> _tasks = new List<TaskItem>();
+        private List<TaskItem> _tasks = [];
+
+        /// <summary>
+        /// JSON序列化选项，缓存以提高性能
+        /// </summary>
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            TypeInfoResolver = TaskItemContext.Default,
+            WriteIndented = true
+        };
 
         /// <summary>
         /// 初始化数据管理器
@@ -53,7 +82,7 @@ namespace WinTodo.Data
                 LogHelper.LogError(ex, "初始化数据目录失败");
                 // 如果无法创建目录，仍然继续执行，确保应用能够启动
                 _dataFilePath = PathHelper.GetDataFilePath(DataFileName);
-                _tasks = new List<TaskItem>();
+                _tasks = [];
             }
         }
 
@@ -66,18 +95,18 @@ namespace WinTodo.Data
             {
                 try
                 {
-                    string json = File.ReadAllText(_dataFilePath);
-                    _tasks = JsonSerializer.Deserialize(json, TaskItemContext.Default.ListTaskItem) ?? new List<TaskItem>();
+                    var json = File.ReadAllText(_dataFilePath);
+                    _tasks = JsonSerializer.Deserialize(json, TaskItemContext.Default.ListTaskItem) ?? [];
                 }
                 catch (Exception ex)
                 {
                     LogHelper.LogError(ex, "反序列化数据失败");
-                    _tasks = new List<TaskItem>();
+                    _tasks = [];
                 }
             }
             else
             {
-                _tasks = new List<TaskItem>();
+                _tasks = [];
             }
         }
 
@@ -88,16 +117,14 @@ namespace WinTodo.Data
         {
             try
             {
-                // 使用编译时生成的JsonSerializerContext，避免反射禁用问题
-                var options = new JsonSerializerOptions
-                {
-                    TypeInfoResolver = TaskItemContext.Default,
-                    WriteIndented = true
-                };
-                string json = JsonSerializer.Serialize(_tasks, options);
+                // 使用编译时生成的JsonSerializerContext，避免反射禁用问题和裁剪警告
+                var json = JsonSerializer.Serialize(_tasks, TaskItemContext.Default.ListTaskItem);
                 File.WriteAllText(_dataFilePath, json);
             }
-            catch { /* 忽略保存错误 */ }
+            catch (Exception ex)
+            {
+                LogHelper.LogError(ex, "保存任务数据失败");
+            }
         }
 
         /// <summary>
@@ -221,19 +248,19 @@ namespace WinTodo.Data
         /// 获取所有任务
         /// </summary>
         /// <returns>任务列表</returns>
-        public List<TaskItem> GetAllTasks()
+        public IEnumerable<TaskItem> GetAllTasks()
         {
-            return _tasks.Where(t => !t.IsDeleted).ToList();
+            return _tasks.Where(t => !t.IsDeleted);
         }
 
         /// <summary>
-        /// 鑾峰彇浠婃棩浠诲姟
+        /// 获取今日任务
         /// </summary>
-        /// <returns>浠婃棩浠诲姟鍒楄〃</returns>
-        public List<TaskItem> GetTodayTasks()
+        /// <returns>今日任务列表</returns>
+        public IEnumerable<TaskItem> GetTodayTasks()
         {
-            DateTime today = DateTime.Today;
-            return _tasks.Where(t => !t.IsDeleted && t.CreatedAt.Date == today).ToList();
+            var today = DateTime.Today;
+            return _tasks.Where(t => !t.IsDeleted && t.CreatedAt.Date == today);
         }
 
         /// <summary>
@@ -241,18 +268,18 @@ namespace WinTodo.Data
         /// </summary>
         /// <param name="group">分组名称</param>
         /// <returns>任务列表</returns>
-        public List<TaskItem> GetTasksByGroup(string group)
+        public IEnumerable<TaskItem> GetTasksByGroup(string group)
         {
-            return _tasks.Where(t => t.Group == group && !t.IsDeleted).ToList();
+            return _tasks.Where(t => t.Group == group && !t.IsDeleted);
         }
 
         /// <summary>
         /// 获取回收站任务
         /// </summary>
         /// <returns>回收站任务列表</returns>
-        public List<TaskItem> GetRecycleBinTasks()
+        public IEnumerable<TaskItem> GetRecycleBinTasks()
         {
-            return _tasks.Where(t => t.IsDeleted).ToList();
+            return _tasks.Where(t => t.IsDeleted);
         }
 
         /// <summary>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  修剪指令文件，用于配置.NET修剪工具的行为
+  解决IL2104警告：Assembly 'Microsoft.Windows.SDK.NET' produced trim warnings
+  解决IL2104警告：Assembly 'WinRT.Runtime' produced trim warnings
+-->
+<linker>
+  <!-- 为WinUI 3/Windows App SDK添加修剪指令 -->
+  <assembly fullname="Microsoft.Windows.SDK.NET" preserve="all" />
+  <assembly fullname="WinRT.Runtime" preserve="all" />
+  
+  <!-- 为JSON序列化上下文添加修剪指令 -->
+  <assembly fullname="WinTodo">
+    <type fullname="WinTodo.Data.ConfigContext" preserve="all" />
+  </assembly>
+</linker>

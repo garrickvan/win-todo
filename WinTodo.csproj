@@ -38,6 +38,8 @@
         <PublishReadyToRun>true</PublishReadyToRun>
         <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
         <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+        <!-- 裁剪指令文件 -->
+        <TrimmerRootDescriptor>trim.xml</TrimmerRootDescriptor>
 
         <!-- 单文件发布优化 -->
         <PublishSingleFile>true</PublishSingleFile>

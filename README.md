@@ -19,12 +19,6 @@ WinTodo是一个简洁、高效的Windows待办事项应用程序，帮助您管
 ## 系统要求
 
 - Windows 10 版本 17763.0 或更高版本，或 Windows 11
-- .NET 6.0 或更高版本
-- Visual Studio 2022 版本 17.3 或更高版本
-- 已安装以下 Visual Studio 工作负载：
-  - 通用 Windows 平台开发
-  - .NET 桌面开发
-  - Windows App SDK C# 模板
 
 ## 安装方法
 
@@ -109,9 +103,11 @@ WinTodo/
 
 ## 开发环境
 
-- Visual Studio 2022
-- .NET Framework 4.8
-- WPF (Windows Presentation Foundation)
+- **.NET** 10.0
+- **Microsoft.Windows.SDK.BuildTools** 10.*
+- **WinUI 3**
+- **支持平台**: x86, x64, ARM64
+- **默认平台**: x64
 
 ## 贡献指南
 

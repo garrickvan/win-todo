@@ -1,3 +1,23 @@
+//  Copyright (c) 2026 WinTodo
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -41,6 +61,14 @@ namespace WinTodo.Data
     private ConfigData _configData = new();
 
     /// <summary>
+    /// JSON序列化选项，缓存以提高性能
+    /// </summary>
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        TypeInfoResolver = ConfigContext.Default
+    };
+
+    /// <summary>
     /// 初始化配置管理器
     /// </summary>
     public ConfigManager()
@@ -62,52 +90,55 @@ namespace WinTodo.Data
     }
 
     /// <summary>
-    /// 从文件加载配置
-    /// </summary>
-    private void LoadConfig()
-    {
-      if (File.Exists(_configFilePath))
-      {
-        try
+        /// 从文件加载配置
+        /// </summary>
+        private void LoadConfig()
         {
-          string json = File.ReadAllText(_configFilePath);
-          _configData = JsonSerializer.Deserialize(json, ConfigContext.Default.ConfigData) ?? _configData;
-          // 确保WindowPosition不为null
-          _configData.WindowPosition ??= new WindowPosition { X = 100, Y = 100 };
+          if (File.Exists(_configFilePath))
+          {
+            try
+            {
+              var json = File.ReadAllText(_configFilePath);
+              _configData = JsonSerializer.Deserialize(json, ConfigContext.Default.ConfigData) ?? _configData;
+              // 确保WindowPosition不为null
+              _configData.WindowPosition ??= new() { X = 100, Y = 100 };
+            }
+            catch (Exception ex)
+            {
+              LogHelper.LogError(ex, "反序列化配置失败");
+              // 恢复现有配置，只记录错误
+            }
+          }
+          else
+          {
+            // 如果文件不存在，使用默认配置
+            _configData = new()
+            {
+              IsStayOnTop = false,
+              IsPositionLocked = true,
+              IsShowingInTaskbar = true,
+              WindowPosition = new() { X = 100, Y = 100 }
+            };
+            // 保存默认配置到文件
+            SaveConfig();
+          }
         }
-        catch (Exception ex)
-        {
-          LogHelper.LogError(ex, "反序列化配置失败");
-          // 恢复现有配置，只记录错误
-        }
-      }
-      else
-      {
-        // 如果文件不存在，使用默认配置
-        _configData = new ConfigData
-        {
-          IsStayOnTop = false,
-          IsPositionLocked = true,
-          IsShowingInTaskbar = true,
-          WindowPosition = new WindowPosition { X = 100, Y = 100 }
-        };
-        // 保存默认配置到文件
-        SaveConfig();
-      }
-    }
 
     /// <summary>
-    /// 保存配置到文件
-    /// </summary>
-    private void SaveConfig()
-    {
-      try
-      {
-        string json = JsonSerializer.Serialize(_configData, ConfigContext.Default.ConfigData);
-        File.WriteAllText(_configFilePath, json);
-      }
-      catch { /* 忽略保存错误 */ }
-    }
+        /// 保存配置到文件
+        /// </summary>
+        private void SaveConfig()
+        {
+          try
+          {
+            var json = JsonSerializer.Serialize(_configData, ConfigContext.Default.ConfigData);
+            File.WriteAllText(_configFilePath, json);
+          }
+          catch (Exception ex)
+          {
+            LogHelper.LogError(ex, "保存配置失败");
+          }
+        }
 
     /// <summary>
     /// 获取配置值
@@ -150,17 +181,17 @@ namespace WinTodo.Data
     }
 
     /// <summary>
-    /// 获取窗口位置
-    /// </summary>
-    /// <returns>窗口位置字典，包含X和Y坐标</returns>
-    public System.Collections.Generic.Dictionary<string, int> GetWindowPosition()
-    {
-      return new System.Collections.Generic.Dictionary<string, int>
-            {
-                { "x", _configData.WindowPosition.X },
-                { "y", _configData.WindowPosition.Y }
-            };
-    }
+        /// 获取窗口位置
+        /// </summary>
+        /// <returns>窗口位置字典，包含X和Y坐标</returns>
+        public Dictionary<string, int> GetWindowPosition()
+        {
+          return new()
+                {
+                    { "x", _configData.WindowPosition.X },
+                    { "y", _configData.WindowPosition.Y }
+                };
+        }
 
     /// <summary>
     /// 更新窗口位置

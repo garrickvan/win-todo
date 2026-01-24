@@ -1,4 +1,24 @@
-﻿using Microsoft.UI.Xaml.Navigation;
+//  Copyright (c) 2026 WinTodo
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+
+using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
@@ -17,7 +37,7 @@ namespace WinTodo
     private SystemTrayManager? _systemTrayManager;
     private bool _isPositionLocked;
     private bool _isTopmost;
-    private ConfigManager _configManager;
+    private readonly ConfigManager _configManager;
     private bool _isWindowInitialized = false;
 
     /// <summary>
@@ -167,7 +187,7 @@ namespace WinTodo
     /// </summary>
     public App()
     {
-      this.InitializeComponent();
+      InitializeComponent();
       _configManager = new ConfigManager();
 
       // 注册全局异常处理事件
@@ -210,21 +230,15 @@ namespace WinTodo
 
       // 设置窗口大小
       var appWindow = window.AppWindow;
-      appWindow.Resize(new Windows.Graphics.SizeInt32 { Width = 960, Height = 1080 });
+      appWindow.Resize(new(960, 1080));
 
       // 导航到主页面
       _ = rootFrame.Navigate(typeof(MainPage), e.Arguments);
 
-      // 激活窗口
-      window.Activate();
-
-      // 初始化系统托盘（在窗口激活后）
-      _systemTrayManager = new SystemTrayManager(this, window);
-
-      // 设置窗口为桌面部件模式（在窗口激活后）
+      // 设置窗口为桌面部件模式
       SetupDesktopWidgetMode();
 
-      // 加载并设置窗口位置
+      // 加载并设置窗口位置（在激活窗口前设置，避免闪烁）
       LoadAndSetWindowPosition();
 
       // 加载并设置窗口置顶状态
@@ -232,6 +246,12 @@ namespace WinTodo
 
       // 加载并设置任务栏显示状态
       LoadAndSetTaskbarVisibilityState();
+
+      // 激活窗口
+      window.Activate();
+
+      // 初始化系统托盘
+      _systemTrayManager = new SystemTrayManager(this, window);
 
       // 设置窗口过程钩子，处理窗口拖动事件
       SetWindowProcHook();
@@ -253,41 +273,34 @@ namespace WinTodo
         if (hWnd != IntPtr.Zero)
         {
           // 移除窗口边框和标题栏
-          IntPtr stylePtr = GetWindowLongPtr(hWnd, GWL_STYLE);
-          int style = (int)stylePtr;
+          var stylePtr = GetWindowLongPtr(hWnd, GWL_STYLE);
+          var style = (int)stylePtr;
           style &= ~(WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-          SetWindowLongPtr(hWnd, GWL_STYLE, new IntPtr(style));
+          SetWindowLongPtr(hWnd, GWL_STYLE, (IntPtr)style);
 
           // 设置扩展样式：无激活、工具窗口、不在任务栏显示
-          IntPtr exStylePtr = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
-          int exStyle = (int)exStylePtr;
+          var exStylePtr = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+          var exStyle = (int)exStylePtr;
           //   exStyle |= WS_EX_NOACTIVATE;
           // exStyle |= WS_EX_TOOLWINDOW;
           exStyle &= ~WS_EX_APPWINDOW;
-          SetWindowLongPtr(hWnd, GWL_EXSTYLE, new IntPtr(exStyle));
+          SetWindowLongPtr(hWnd, GWL_EXSTYLE, (IntPtr)exStyle);
 
           // 关闭标题栏
-          var appWindow = window?.AppWindow;
-          if (appWindow != null)
+          if (window?.AppWindow?.TitleBar is { } titleBar)
           {
-            appWindow.TitleBar.ExtendsContentIntoTitleBar = false;
+            titleBar.ExtendsContentIntoTitleBar = false;
           }
-
-          // 确保窗口可见
-          ShowWindow(hWnd, SW_SHOW);
-          window?.Activate();
         }
         else
         {
-          System.Diagnostics.Debug.WriteLine("获取窗口句柄失败");
+          LogHelper.LogWarning("获取窗口句柄失败");
         }
       }
       catch (Exception ex)
       {
         // 捕获并记录异常，避免应用崩溃
         LogHelper.LogError(ex, "设置桌面部件模式失败");
-        // 确保窗口仍然可见
-        window?.Activate();
       }
     }
 
@@ -396,18 +409,18 @@ namespace WinTodo
       // 获取窗口句柄
       var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
 
-      System.Diagnostics.Debug.WriteLine($"[调试] 设置窗口过程钩子，窗口句柄: {hWnd}");
+      // LogHelper.LogInfo($"设置窗口过程钩子，窗口句柄: {hWnd}");
 
       // 创建窗口过程委托
       _wndProc = new WndProc(WindowProc);
 
       // 获取函数指针
       IntPtr procPtr = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(_wndProc);
-      System.Diagnostics.Debug.WriteLine($"[调试] 窗口过程函数指针: {procPtr}");
+      // LogHelper.LogInfo($"窗口过程函数指针: {procPtr}");
 
       // 设置窗口过程钩子
       _oldWndProc = SetWindowLongPtr(hWnd, GWLP_WNDPROC, procPtr);
-      System.Diagnostics.Debug.WriteLine($"[调试] 原窗口过程: {_oldWndProc}");
+      // LogHelper.LogInfo($"原窗口过程: {_oldWndProc}");
     }
 
     /// <summary>
@@ -415,26 +428,22 @@ namespace WinTodo
     /// </summary>
     private void LoadAndSetWindowPosition()
     {
-      if (window == null) return;
+      if (window is null) return;
 
       try
       {
         // 从配置中获取窗口位置
         var position = _configManager.GetWindowPosition();
-        int x = position["x"];
-        int y = position["y"];
-
-        System.Diagnostics.Debug.WriteLine($"[调试] 加载窗口位置: X={x}, Y={y}");
+        var x = position["x"];
+        var y = position["y"];
 
         // 获取窗口句柄
         var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
         if (hWnd != IntPtr.Zero)
         {
-          // 设置窗口位置
+          // 设置窗口位置，使用SWP_HIDEWINDOW避免在设置位置时显示窗口
           SetWindowPos(hWnd, IntPtr.Zero, x, y, 0, 0,
-              SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOZORDER | SWP_NOOWNERZORDER);
-
-          System.Diagnostics.Debug.WriteLine($"[调试] 窗口位置设置完成");
+              SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER);
         }
       }
       catch (Exception ex)
@@ -487,7 +496,7 @@ namespace WinTodo
             int x = rect.Left;
             int y = rect.Top;
 
-            System.Diagnostics.Debug.WriteLine($"[调试] 保存窗口位置: X={x}, Y={y}");
+            // LogHelper.LogInfo($"保存窗口位置: X={x}, Y={y}");
 
             // 保存到配置
             _configManager.UpdateWindowPosition(x, y);
@@ -516,42 +525,42 @@ namespace WinTodo
     private IntPtr WindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
       // 添加调试日志，记录所有消息
-      System.Diagnostics.Debug.WriteLine($"[调试] 收到窗口消息: {msg}, wParam: {wParam}, lParam: {lParam}");
+      // LogHelper.LogInfo($"收到窗口消息: {msg}, wParam: {wParam}, lParam: {lParam}");
 
       // 处理WM_LBUTTONDOWN消息，用于窗口拖动
       if (msg == WM_LBUTTONDOWN)
       {
-        System.Diagnostics.Debug.WriteLine($"[调试] 处理WM_LBUTTONDOWN消息，锁定状态: {_isPositionLocked}");
+        // LogHelper.LogInfo($"处理WM_LBUTTONDOWN消息，锁定状态: {_isPositionLocked}");
 
         if (!_isPositionLocked)
         {
-          System.Diagnostics.Debug.WriteLine("[调试] 窗口未锁定，执行拖动操作");
+          // LogHelper.LogInfo("窗口未锁定，执行拖动操作");
 
           // 释放鼠标捕获
-          bool releaseResult = ReleaseCapture();
-          System.Diagnostics.Debug.WriteLine($"[调试] ReleaseCapture结果: {releaseResult}");
+          // bool releaseResult = ReleaseCapture();
+          // LogHelper.LogInfo($"ReleaseCapture结果: {releaseResult}");
 
           // 发送WM_NCLBUTTONDOWN消息，模拟在标题栏上按下鼠标左键
-          IntPtr sendResult = SendMessage(hWnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
-          System.Diagnostics.Debug.WriteLine($"[调试] SendMessage结果: {sendResult}");
+          // IntPtr sendResult = SendMessage(hWnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
+          // LogHelper.LogInfo($"SendMessage结果: {sendResult}");
 
           return IntPtr.Zero;
         }
         else
         {
-          System.Diagnostics.Debug.WriteLine("[调试] 窗口已锁定，忽略拖动操作");
+          // LogHelper.LogInfo("窗口已锁定，忽略拖动操作");
         }
       }
       // 处理窗口移动或调整大小结束的消息，保存窗口位置
       else if (msg == WM_EXITSIZEMOVE)
       {
-        System.Diagnostics.Debug.WriteLine("[调试] 处理WM_EXITSIZEMOVE消息，保存窗口位置");
+        // LogHelper.LogInfo("处理WM_EXITSIZEMOVE消息，保存窗口位置");
         SaveWindowPosition();
       }
 
       // 对于其他消息，调用原始窗口过程处理
       IntPtr result = CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
-      System.Diagnostics.Debug.WriteLine($"[调试] 原始窗口过程返回: {result}");
+      // LogHelper.LogInfo($"原始窗口过程返回: {result}");
       return result;
     }
 
