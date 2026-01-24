@@ -51,7 +51,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
         <!-- 启用运行时封送，支持 DllImport 的 ref/out 参数 -->
-        <EnableRuntimeMarshalling>true</EnableRuntimeMarshalling>
+        <EnableRuntimeMarshalling>false</EnableRuntimeMarshalling>
 
         <!-- 单文件发布需要 SelfContained 为 true -->
         <SelfContained>true</SelfContained>

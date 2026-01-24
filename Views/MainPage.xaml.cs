@@ -43,16 +43,24 @@ namespace WinTodo.Views
     private PointInt32 _windowStartPosition;
     private MenuFlyout? _contextMenu; // 右键菜单
 
-    // Windows API 导入
-    [LibraryImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetCursorPos(out System.Drawing.Point lpPoint);
+    // 自定义Point结构体，用于替代System.Drawing.Point
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Point
+    {
+      public int X;
+      public int Y;
+    }
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    // Windows API 导入
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetCursorPos(out Point lpPoint);
+
+    [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
@@ -517,7 +525,7 @@ namespace WinTodo.Views
       var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
 
       // 记录初始鼠标位置
-      GetCursorPos(out System.Drawing.Point cursorPos);
+      GetCursorPos(out Point cursorPos);
       _dragStartPoint = new(cursorPos.X, cursorPos.Y);
 
       // 记录初始窗口位置
@@ -544,7 +552,7 @@ namespace WinTodo.Views
       var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
 
       // 获取当前鼠标位置
-      GetCursorPos(out System.Drawing.Point cursorPos);
+      GetCursorPos(out Point cursorPos);
 
       // 计算位置偏移
       int offsetX = cursorPos.X - _dragStartPoint.X;

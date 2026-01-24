@@ -266,48 +266,16 @@ namespace WinTodo
           exStyle &= ~WS_EX_APPWINDOW;
           SetWindowLongPtr(hWnd, GWL_EXSTYLE, new IntPtr(exStyle));
 
-          // 额外确保窗口不在任务栏显示：移除WS_EX_APPWINDOW并添加WS_EX_TOOLWINDOW
-          // WS_EX_TOOLWINDOW样式的窗口不会在任务栏显示
-          // WS_EX_APPWINDOW样式的窗口会在任务栏显示，所以需要移除
-
-          // 查找Program Manager窗口（桌面的实际窗口）
-          IntPtr progmanHwnd = FindWindow("Progman", "Program Manager");
-
-          // 获取桌面窗口句柄
-          IntPtr desktopHwnd = GetDesktopWindow();
-
-          // 仅在调试模式下输出信息
-          System.Diagnostics.Debug.WriteLine($"桌面窗口句柄: {desktopHwnd}, Program Manager句柄: {progmanHwnd}");
-
-          // 先确保窗口可见
-          ShowWindow(hWnd, SW_SHOW);
-
-          // 将窗口设置为Program Manager窗口的子窗口，这样它会显示在桌面背景之上，桌面图标之下
-          // 当用户点击返回桌面时，部件会和桌面一起显示，不会被隐藏
-          if (progmanHwnd != IntPtr.Zero)
-          {
-            SetParent(hWnd, progmanHwnd);
-          }
-          else
-          {
-            // 如果Program Manager窗口找不到，回退到桌面窗口
-            SetParent(hWnd, desktopHwnd);
-          }
-
-          // 确保窗口始终可见，并且位于所有窗口的底部，但在桌面背景之上
-          SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0,
-              SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
-
-          // 再次显示窗口，确保设置完窗口后窗口仍然可见
-          ShowWindow(hWnd, SW_SHOW);
-          window?.Activate();
-
           // 关闭标题栏
           var appWindow = window?.AppWindow;
           if (appWindow != null)
           {
             appWindow.TitleBar.ExtendsContentIntoTitleBar = false;
           }
+
+          // 确保窗口可见
+          ShowWindow(hWnd, SW_SHOW);
+          window?.Activate();
         }
         else
         {

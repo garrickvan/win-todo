@@ -1,4 +1,4 @@
-﻿// MIT License
+// MIT License
 //
 // Copyright (c) 2026 WinTodo
 //
@@ -28,18 +28,295 @@ namespace WinTodo.UI
   /// <summary>
   /// 系统托盘管理器，负责创建和管理系统托盘图标及菜单
   /// </summary>
-  /// <remarks>
-  /// 构造函数
-  /// </remarks>
   /// <param name="app">应用实例</param>
   /// <param name="window">主窗口实例</param>
-  public partial class SystemTrayManager(App app, Window window) : IDisposable
+  public partial class SystemTrayManager : IDisposable
   {
-    private readonly App _app = app;
-    private readonly Window _window = window;
+    private readonly App _app;
+    private readonly Window _window;
     private NotifyIconData _notifyIconData;
     private bool _isDisposed;
     private WindowMessageHook? _messageHook;
+
+    /// <summary>
+    /// 构造函数，初始化系统托盘
+    /// </summary>
+    /// <param name="app">应用实例</param>
+    /// <param name="window">主窗口实例</param>
+    public SystemTrayManager(App app, Window window)
+    {
+      _app = app;
+      _window = window;
+      Initialize();
+    }
+
+    /// <summary>
+    /// 初始化系统托盘
+    /// </summary>
+    private void Initialize()
+    {
+      try
+      {
+        // 获取窗口句柄
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+        if (hWnd == IntPtr.Zero)
+        {
+          LogHelper.LogError(new Exception("获取窗口句柄失败"), "初始化系统托盘失败");
+          return;
+        }
+
+        // 初始化NotifyIconData结构体
+        _notifyIconData = new NotifyIconData
+        {
+          cbSize = (uint)Marshal.SizeOf<NotifyIconData>(),
+          hWnd = hWnd,
+          uID = 1,
+          uFlags = NotifyIconFlags.NIF_ICON | NotifyIconFlags.NIF_MESSAGE | NotifyIconFlags.NIF_TIP,
+          uCallbackMessage = WM_USER + 1,
+          szTip = "WinTodo桌面工具",
+          dwState = 0,
+          dwStateMask = 0
+        };
+
+        // 加载图标资源
+        _notifyIconData.hIcon = LoadIconFromResource();
+        if (_notifyIconData.hIcon == IntPtr.Zero)
+        {
+          LogHelper.LogError(new Exception("加载图标资源失败"), "初始化系统托盘失败");
+          return;
+        }
+
+        // 添加系统托盘图标
+        bool result = Shell_NotifyIcon(NotifyIconMessage.NIM_ADD, ref _notifyIconData);
+        if (!result)
+        {
+          LogHelper.LogError(new Exception("添加系统托盘图标失败"), "初始化系统托盘失败");
+          return;
+        }
+
+        // 设置窗口消息钩子，用于处理托盘消息（放在最后，确保图标已成功添加）
+        _messageHook = new WindowMessageHook(hWnd);
+        _messageHook.MessageReceived += OnWindowMessageReceived;
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "初始化系统托盘失败");
+        // 确保在发生异常时释放已分配的资源
+        if (_messageHook != null)
+        {
+          _messageHook.Dispose();
+          _messageHook = null;
+        }
+        // 尝试移除可能已添加的托盘图标
+        try
+        {
+          Shell_NotifyIcon(NotifyIconMessage.NIM_DELETE, ref _notifyIconData);
+        }
+        catch (Exception removeEx)
+        {
+          LogHelper.LogError(removeEx, "移除系统托盘图标失败");
+        }
+      }
+    }
+
+    /// <summary>
+    /// 从资源加载图标，提供多种加载方案以提高成功率
+    /// </summary>
+    /// <returns>图标句柄</returns>
+    private IntPtr LoadIconFromResource()
+    {
+      try
+      {
+        // 方案1: 尝试使用ExtractIcon从当前可执行文件提取图标（优先级调整，因为这是最可靠的）
+        IntPtr hIcon = ExtractIconFromExecutable();
+        if (hIcon != IntPtr.Zero)
+        {
+          return hIcon;
+        }
+
+        // 方案2: 尝试使用LoadIcon加载Windows标准图标
+        hIcon = LoadStandardWindowsIcon();
+        if (hIcon != IntPtr.Zero)
+        {
+          return hIcon;
+        }
+
+        // 方案3: 尝试使用LoadIcon加载默认应用图标
+        hIcon = LoadDefaultIcon();
+        if (hIcon != IntPtr.Zero)
+        {
+          return hIcon;
+        }
+
+        // 方案4: 尝试使用GetStockObject获取默认图标
+        hIcon = GetStockObject(StockObjectType.OBM_APPLICATION);
+        if (hIcon != IntPtr.Zero)
+        {
+          return hIcon;
+        }
+
+        LogHelper.LogError(new Exception("所有图标加载方案均失败"), "加载图标资源失败");
+        return IntPtr.Zero;
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "加载图标资源失败");
+        return IntPtr.Zero;
+      }
+    }
+
+    /// <summary>
+    /// 使用LoadIcon加载默认图标
+    /// </summary>
+    /// <returns>图标句柄</returns>
+    private IntPtr LoadDefaultIcon()
+    {
+      try
+      {
+        // 尝试使用GetModuleHandle获取当前模块句柄
+        IntPtr hModule = GetModuleHandle(null);
+        if (hModule != IntPtr.Zero)
+        {
+          // 尝试加载默认图标，使用数值常量
+          IntPtr hIcon = LoadIcon(hModule, (IntPtr)IDI_APPLICATION);
+          if (hIcon != IntPtr.Zero)
+          {
+            return hIcon;
+          }
+        }
+
+        // 如果加载失败，尝试使用Windows默认图标
+        IntPtr systemIcon = LoadIcon(IntPtr.Zero, (IntPtr)IDI_APPLICATION);
+        if (systemIcon != IntPtr.Zero)
+        {
+          return systemIcon;
+        }
+
+        return IntPtr.Zero;
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "使用LoadIcon加载默认图标失败");
+        return IntPtr.Zero;
+      }
+    }
+
+    /// <summary>
+    /// 从当前可执行文件提取图标
+    /// </summary>
+    /// <returns>图标句柄</returns>
+    private IntPtr ExtractIconFromExecutable()
+    {
+      try
+      {
+        // 尝试获取当前可执行文件路径的多种方式
+        string exePath = string.Empty;
+
+        // 方式1: 使用Process.GetCurrentProcess().MainModule
+        var mainModule = System.Diagnostics.Process.GetCurrentProcess().MainModule;
+        if (mainModule != null && !string.IsNullOrEmpty(mainModule.FileName))
+        {
+          exePath = mainModule.FileName;
+        }
+        // 方式2: 使用Assembly.GetExecutingAssembly().Location
+        else if (string.IsNullOrEmpty(exePath))
+        {
+          exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        }
+        // 方式3: 使用Assembly.GetEntryAssembly().Location
+        else if (string.IsNullOrEmpty(exePath))
+        {
+          var entryAssembly = System.Reflection.Assembly.GetEntryAssembly();
+          if (entryAssembly != null)
+          {
+            exePath = entryAssembly.Location;
+          }
+        }
+
+        if (!string.IsNullOrEmpty(exePath))
+        {
+          IntPtr hIcon = ExtractIcon(IntPtr.Zero, exePath, 0);
+          if (hIcon != IntPtr.Zero && hIcon != (IntPtr)1)
+          {
+            return hIcon;
+          }
+        }
+        return IntPtr.Zero;
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "从可执行文件提取图标失败");
+        return IntPtr.Zero;
+      }
+    }
+
+    /// <summary>
+    /// 加载Windows标准图标
+    /// </summary>
+    /// <returns>图标句柄</returns>
+    private IntPtr LoadStandardWindowsIcon()
+    {
+      try
+      {
+        // 尝试加载Windows标准图标，如应用程序图标、信息图标等
+        // 使用数值常量替代字符串常量，提高兼容性
+        const int IDI_APPLICATION = 32512;
+        const int IDI_INFORMATION = 32516;
+        const int IDI_WARNING = 32513;
+        const int IDI_ERROR = 32514;
+        const int IDI_QUESTION = 32515;
+
+        // 尝试加载不同的标准图标
+        int[] standardIcons = { IDI_APPLICATION, IDI_INFORMATION, IDI_WARNING, IDI_QUESTION, IDI_ERROR };
+
+        foreach (int iconId in standardIcons)
+        {
+          IntPtr hIcon = LoadIcon(IntPtr.Zero, (IntPtr)iconId);
+          if (hIcon != IntPtr.Zero)
+          {
+            return hIcon;
+          }
+        }
+
+        return IntPtr.Zero;
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "加载Windows标准图标失败");
+        return IntPtr.Zero;
+      }
+    }
+
+    /// <summary>
+    /// Win32 API - 加载图标
+    /// </summary>
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr LoadIcon(IntPtr hInstance, IntPtr lpIconName);
+
+    /// <summary>
+    /// Win32 API - 获取系统默认对象
+    /// </summary>
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr GetStockObject(StockObjectType fnObject);
+
+    /// <summary>
+    /// 系统对象类型枚举
+    /// </summary>
+    private enum StockObjectType : int
+    {
+      OBM_APPLICATION = 32752
+    }
+
+    /// <summary>
+    /// Win32 API - 从可执行文件提取图标
+    /// </summary>
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
+
+    /// <summary>
+    /// 默认图标常量
+    /// </summary>
+    private const int IDI_APPLICATION = 32512;
 
     /// <summary>
     /// 处理窗口消息
@@ -247,7 +524,14 @@ namespace WinTodo.UI
     /// </summary>
     public void UpdateTrayIcon()
     {
-      Shell_NotifyIcon(NotifyIconMessage.NIM_MODIFY, ref _notifyIconData);
+      try
+      {
+        Shell_NotifyIcon(NotifyIconMessage.NIM_MODIFY, ref _notifyIconData);
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "更新系统托盘图标失败");
+      }
     }
 
     /// <summary>
@@ -255,7 +539,14 @@ namespace WinTodo.UI
     /// </summary>
     private void RemoveTrayIcon()
     {
-      Shell_NotifyIcon(NotifyIconMessage.NIM_DELETE, ref _notifyIconData);
+      try
+      {
+        Shell_NotifyIcon(NotifyIconMessage.NIM_DELETE, ref _notifyIconData);
+      }
+      catch (Exception ex)
+      {
+        LogHelper.LogError(ex, "移除系统托盘图标失败");
+      }
     }
 
     /// <summary>
@@ -301,31 +592,42 @@ namespace WinTodo.UI
 
     private const uint WM_USER = 0x0400;
 
-    [DllImport("shell32.dll", SetLastError = true)]
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool Shell_NotifyIcon(NotifyIconMessage dwMessage, ref NotifyIconData pnid);
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SetForegroundWindow(IntPtr hWnd);
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetCursorPos(out Point lpPoint);
+    private static extern bool GetCursorPos(out Point lpPoint);
 
-    [LibraryImport("user32.dll", SetLastError = true)]
-    private static partial IntPtr CreatePopupMenu();
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr CreatePopupMenu();
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool AppendMenu(IntPtr hMenu, MenuFlags uFlags, uint uIDNewItem, [MarshalAs(UnmanagedType.LPWStr)] string lpNewItem);
+    private static extern bool AppendMenu(IntPtr hMenu, MenuFlags uFlags, uint uIDNewItem, string lpNewItem);
 
-    [LibraryImport("user32.dll", SetLastError = true)]
-    private static partial int TrackPopupMenu(IntPtr hMenu, MenuFlags uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int TrackPopupMenu(IntPtr hMenu, MenuFlags uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool DestroyMenu(IntPtr hMenu);
+    private static extern bool DestroyMenu(IntPtr hMenu);
+
+    // 获取当前模块句柄
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    [Flags]
+    private enum LoadLibraryFlags : uint
+    {
+        LOAD_LIBRARY_AS_DATAFILE = 0x00000002,
+        LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Point
@@ -407,7 +709,7 @@ namespace WinTodo.UI
     {
       private readonly IntPtr _hWnd;
       private readonly WndProc _wndProc;
-      private readonly IntPtr _oldWndProc;
+      private IntPtr _oldWndProc;
       private bool _isDisposed;
 
       /// <summary>
@@ -423,13 +725,15 @@ namespace WinTodo.UI
       {
         _hWnd = hWnd;
         _wndProc = new WndProc(WindowProc);
-        _oldWndProc = SetWindowLongPtr(_hWnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
+        _oldWndProc = IntPtr.Zero;
 
-        // 检查SetWindowLongPtr是否成功
-        if (_oldWndProc == IntPtr.Zero)
+        try
         {
-          int errorCode = Marshal.GetLastWin32Error();
-          LogHelper.LogError(new Exception($"设置窗口过程失败，错误码: {errorCode}"), "初始化窗口消息钩子失败");
+          _oldWndProc = SetWindowLongPtr(_hWnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProc));
+        }
+        catch (Exception ex)
+        {
+          LogHelper.LogError(ex, "设置窗口过程失败");
         }
       }
 
@@ -449,7 +753,20 @@ namespace WinTodo.UI
         }
 
         // 调用原窗口过程
-        return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+        try
+        {
+          if (_oldWndProc != IntPtr.Zero)
+          {
+            return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+          }
+        }
+        catch (Exception ex)
+        {
+          LogHelper.LogError(ex, "调用原窗口过程失败");
+        }
+
+        // 如果原窗口过程为空，调用DefWindowProc
+        return DefWindowProc(hWnd, msg, wParam, lParam);
       }
 
       /// <summary>
@@ -472,11 +789,17 @@ namespace WinTodo.UI
           // 恢复原窗口过程
           if (_oldWndProc != IntPtr.Zero)
           {
-            IntPtr result = SetWindowLongPtr(_hWnd, GWLP_WNDPROC, _oldWndProc);
-            if (result == IntPtr.Zero)
+            try
             {
-              int errorCode = Marshal.GetLastWin32Error();
-              LogHelper.LogError(new Exception($"恢复原窗口过程失败，错误码: {errorCode}"), "释放窗口消息钩子失败");
+              SetWindowLongPtr(_hWnd, GWLP_WNDPROC, _oldWndProc);
+            }
+            catch (Exception ex)
+            {
+              LogHelper.LogError(ex, "恢复原窗口过程失败");
+            }
+            finally
+            {
+              _oldWndProc = IntPtr.Zero;
             }
           }
 
@@ -491,17 +814,23 @@ namespace WinTodo.UI
       private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
       // 根据系统位数选择合适的函数
-      [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
-      private static partial IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+      [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+      private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
-      [LibraryImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
-      private static partial IntPtr SetWindowLong32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+      [DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+      private static extern IntPtr SetWindowLong32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
-      [LibraryImport("user32.dll", EntryPoint = "CallWindowProc", SetLastError = true)]
-      private static partial IntPtr CallWindowProc64(IntPtr lpPrevWndFunc, IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+      [DllImport("user32.dll", EntryPoint = "CallWindowProcW")]
+      private static extern IntPtr CallWindowProc64(IntPtr lpPrevWndFunc, IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
-      [LibraryImport("user32.dll", EntryPoint = "CallWindowProcA", SetLastError = true)]
-      private static partial IntPtr CallWindowProc32(IntPtr lpPrevWndFunc, IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+      [DllImport("user32.dll", EntryPoint = "CallWindowProcW")]
+      private static extern IntPtr CallWindowProc32(IntPtr lpPrevWndFunc, IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+      /// <summary>
+      /// 调用默认窗口过程
+      /// </summary>
+      [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
+      private static extern IntPtr DefWindowProc(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
       /// <summary>
       /// 设置窗口过程，根据系统位数自动选择合适的函数

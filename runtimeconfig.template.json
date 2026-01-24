@@ -1,7 +1,7 @@
 {
   "runtimeOptions": {
     "configProperties": {
-      "System.Runtime.InteropServices.Marshal.EnableRuntimeMarshalling": true
+      "System.Runtime.InteropServices.Marshal.EnableRuntimeMarshalling": false
     }
   }
 }
