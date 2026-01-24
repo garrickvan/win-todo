@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+        <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+        <OutputType>WinExe</OutputType>
+
+        <!-- WinUI 3 -->
+        <UseWinUI>true</UseWinUI>
+        <EnableMsixTooling>true</EnableMsixTooling>
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <!-- Project Options -->
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>WinTodo</RootNamespace>
+
+        <!-- App Options -->
+        <UseRidGraph>true</UseRidGraph>
+        <Platforms>x86;x64;ARM64</Platforms>
+        <DefaultPlatform>x64</DefaultPlatform>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets\todo.ico</ApplicationIcon>
+        <!-- 仅在指定了Platform时使用PublishProfile -->
+        <PublishProfile Condition="$(Platform) != ''">win-$(Platform).pubxml</PublishProfile>
+
+        <!-- 根据构建平台设置RuntimeIdentifier，解决WindowsAppSDKSelfContained构建问题 -->
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+        <!-- 添加默认RuntimeIdentifier，解决直接运行dotnet run时的构建错误 -->
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <RuntimeIdentifier Condition="'$(Platform)' == 'x86'">win-x86</RuntimeIdentifier>
+        <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+        <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+
+        <!-- 配置裁剪和预编译 -->
+        <PublishTrimmed>true</PublishTrimmed>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
+        <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+
+        <!-- 单文件发布优化 -->
+        <PublishSingleFile>true</PublishSingleFile>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+
+        <!-- AOT 编译（如果支持） -->
+        <PublishAot>false</PublishAot>
+
+        <!-- 允许不安全代码，LibraryImportAttribute 需要 -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <!-- 启用运行时封送，支持 DllImport 的 ref/out 参数 -->
+        <EnableRuntimeMarshalling>true</EnableRuntimeMarshalling>
+
+        <!-- 单文件发布需要 SelfContained 为 true -->
+        <SelfContained>true</SelfContained>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="Assets\SplashScreen.scale-200.png" />
+
+        <Content Include="Assets\Square150x150Logo.scale-200.png" />
+        <Content Include="Assets\Square44x44Logo.scale-200.png" />
+
+        <Content Include="Assets\StoreLogo.png" />
+        <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+        <Content Include="Assets\todo.ico" />
+        <EmbeddedResource Include="Assets\todo.ico" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="Win10DesktopTool.slnx" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.*" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />
+        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.*" />
+
+        <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
+
+
+
+    <!--
+        Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+        Tools extension to be activated for this project even if the Windows App SDK Nuget
+        package has not yet been restored.
+    -->
+    <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+        <ProjectCapability Include="Msix"/>
+    </ItemGroup>
+
+    <!--
+        Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
+        Explorer "Package and Publish" context menu entry to be enabled for this project even if
+        the Windows App SDK Nuget package has not yet been restored.
+    -->
+    <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+        <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+    </PropertyGroup>
+</Project>

@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "Win10DesktopTool (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Win10DesktopTool (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

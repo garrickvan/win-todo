@@ -1,0 +1,59 @@
+# Build output
+bin/
+obj/
+
+# Windows app package files
+/AppPackages/
+*.appx
+*.appxbundle
+*.appinstaller
+
+# Visual Studio cache files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Windows thumbnail cache
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ ehthumbs_vista.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Image cache (if any)
+image/
+
+# Local configuration files
+appsettings.local.json
+*.local.config
+
+# NuGet packages (if using packages.config)
+packages/
+
+# MSBuild generated files
+*.props
+*.targets
+
+# Code analysis results
+*.CodeAnalysisLog.xml
+*.dll.CodeAnalysisLog.xml
+*.exe.CodeAnalysisLog.xml
+
+# Unit test results
+TestResults/
+*.trx
+*.coverage
+
+# Debug symbols
+*.pdb
+
+# Release notes generated files
+*.md.release-notes
+
+.trae/
