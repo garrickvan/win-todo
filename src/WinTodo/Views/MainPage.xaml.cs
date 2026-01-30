@@ -23,8 +23,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml.Input;
 using Windows.Graphics;
-using WinTodo.Data;
-using WinTodo.UI;
+using WinTodo.Services;
 
 namespace WinTodo.Views
 {

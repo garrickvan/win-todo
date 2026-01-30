@@ -1,5 +1,5 @@
-﻿<Solution>
-    <Project Path="WinTodo.csproj">
+<Solution>
+    <Project Path="src\WinTodo\WinTodo.csproj">
         <Deploy />
     </Project>
     <Properties Name="Visual Studio">

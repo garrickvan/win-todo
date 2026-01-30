@@ -83,6 +83,10 @@
         <Manifest Include="$(ApplicationManifest)" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\WinTodo.Common\WinTodo.Common.csproj" />
+    </ItemGroup>
+
 
 
     <!--

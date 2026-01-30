@@ -23,8 +23,8 @@ using System;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.Marshalling;
 using System.Threading.Tasks;
-using WinTodo.Data;
-using WinTodo.UI;
+using WinTodo.Common;
+using WinTodo.Services;
 
 namespace WinTodo
 {

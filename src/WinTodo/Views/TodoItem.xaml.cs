@@ -23,9 +23,9 @@
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using WinTodo.Data;
+using WinTodo.Services;
 
-namespace WinTodo.UI
+namespace WinTodo.Views
 {
   /// <summary>
   /// 任务项控件，显示单个待办事项

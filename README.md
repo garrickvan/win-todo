@@ -14,7 +14,7 @@ WinTodo是一个简洁、高效的Windows待办事项应用程序，帮助您管
 
 ## 应用截图
 
-![WinTodo截图](Assets/Screenshot.png)
+![WinTodo截图](docs/Screenshot.png)
 
 ## 系统要求
 
@@ -26,7 +26,7 @@ WinTodo是一个简洁、高效的Windows待办事项应用程序，帮助您管
 2. 使用Visual Studio 2022打开解决方案文件 `WinTodo.slnx`
 3. 恢复 NuGet 包：右键点击解决方案 -> 恢复 NuGet 包
 4. 选择目标平台（x86、x64 或 ARM64）
-5. 编译项目：按 F7 或选择 "生成" -> "生成解决方案"
+5. 编译解决方案：按 F7 或选择 "生成" -> "生成解决方案"
 6. 运行项目：按 F5 或选择 "调试" -> "开始调试"
 
 ## 构建命令行
@@ -37,14 +37,14 @@ WinTodo是一个简洁、高效的Windows待办事项应用程序，帮助您管
 # 恢复 NuGet 包
 dotnet restore
 
-# 构建项目（默认配置为 Debug，平台为 x64）
+# 构建解决方案（默认配置为 Debug，平台为 x64）
 dotnet build
 
-# 运行项目
-dotnet run
+# 运行主项目
+dotnet run --project src/WinTodo/WinTodo.csproj
 
 # 发布项目（示例：发布为 x64 平台的 Release 版本）
-dotnet publish -c Release -p:Platform=x64
+dotnet publish src/WinTodo/WinTodo.csproj -c Release -p:Platform=x64
 ```
 
 ## 使用说明
@@ -89,15 +89,31 @@ dotnet publish -c Release -p:Platform=x64
 
 ```
 WinTodo/
-├── Assets/           # 资源文件
-├── Data/             # 数据存储
-├── image/            # 图片资源
-├── Properties/       # 项目属性
-├── UI/               # 用户界面组件
-├── Views/            # 视图文件
-├── App.xaml          # 应用程序入口XAML
-├── App.xaml.cs       # 应用程序入口代码
-├── WinTodo.csproj    # 项目文件
+├── docs/             # 文档文件
+│   └── Screenshot.png
+├── src/              # 源代码
+│   ├── WinTodo/      # 主项目
+│   │   ├── Assets/           # 资源文件
+│   │   ├── Properties/       # 项目属性
+│   │   │   └── PublishProfiles/  # 发布配置
+│   │   ├── Services/         # 服务类
+│   │   ├── Views/            # 视图文件
+│   │   ├── App.xaml          # 应用程序入口XAML
+│   │   ├── App.xaml.cs       # 应用程序入口代码
+│   │   ├── Imports.cs        # 导入声明
+│   │   ├── Package.appxmanifest  # 应用包清单
+│   │   ├── WinTodo.csproj    # 项目文件
+│   │   ├── app.manifest      # 应用程序清单
+│   │   ├── runtimeconfig.template.json  # 运行时配置模板
+│   │   └── trim.xml          # 裁剪配置
+│   └── WinTodo.Common/  # 公共库项目
+│       ├── LogHelper.cs      # 日志助手
+│       ├── PathHelper.cs     # 路径助手
+│       └── WinTodo.Common.csproj  # 项目文件
+├── .gitattributes    # Git 属性文件
+├── .gitignore        # Git 忽略文件
+├── LICENSE           # 许可证文件
+├── README.md         # 说明文档
 └── WinTodo.slnx      # 解决方案文件
 ```
 

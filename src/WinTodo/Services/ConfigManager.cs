@@ -20,8 +20,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinTodo.Common;
 
-namespace WinTodo.Data
+namespace WinTodo.Services
 {
   /// <summary>
   /// 配置数据类，包含应用程序的所有配置项

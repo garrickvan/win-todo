@@ -21,9 +21,9 @@
 // SOFTWARE.
 
 using System.Runtime.InteropServices;
-using WinTodo.Data;
+using WinTodo.Common;
 
-namespace WinTodo.UI
+namespace WinTodo.Services
 {
   /// <summary>
   /// 系统托盘管理器，负责创建和管理系统托盘图标及菜单

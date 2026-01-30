@@ -23,7 +23,7 @@
 using System;
 using System.IO;
 
-namespace WinTodo.Data
+namespace WinTodo.Common
 {
 
     public static class PathHelper
